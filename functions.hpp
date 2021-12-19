@@ -36,10 +36,10 @@ vector<string> read_group_list(const string &groups_file_name) {
     return groups;
 }
 
-void write_group_list(set<string> &groups, const string &groups_file_name) {
+void write_group_list(vector<pair<string, int>> &groups, const string &groups_file_name) {
     ofstream fout(groups_file_name);
     for (const auto &i: groups) {
-        fout << i << endl;
+        fout << i.first << " " << i.second << endl;
     }
     fout.close();
 }

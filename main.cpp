@@ -18,15 +18,17 @@ int main() {
 
     Graph<string> groups_graph(matrix, groups);
 
-    set<string> s;
-
     string input_file_name = R"(D:\CLionProjects\mephi_lab_graph\input.txt)";
     ifstream fin(input_file_name);
     string group;
-    fin >> group;
+    int max_depth;
+    fin >> group >> max_depth;
     fin.close();
 
-    auto reached = groups_graph.find_reachable(group, s);
+    if (max_depth == -1)
+        max_depth = groups_graph.get_size();
+
+    auto reached = groups_graph.find_reachable(group, max_depth);
 
     string output_file_name = R"(D:\CLionProjects\mephi_lab_graph\output.txt)";
 

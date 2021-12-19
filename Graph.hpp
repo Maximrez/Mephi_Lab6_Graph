@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <string>
+#include <cmath>
 #include <set>
 
 using namespace std;
@@ -26,9 +27,9 @@ bool operator==(const Edge<T> &e1, const Edge<T> &e2) {
 
 template<typename T>
 class Graph {
-public:
     vector<T> vertices;
     vector<Edge<T>> edges;
+public:
 
     Graph(const vector<vector<bool>> &matrix, const vector<T> &v) : vertices(v) {
         for (int i = 0; i < vertices.size(); i++)
@@ -38,6 +39,10 @@ public:
                     edges.push_back(e);
                 }
     };
+
+    int get_size() {
+        return vertices.size();
+    }
 
     void add_vertex(const T &v) {
         for (int i = 0; i < vertices.size(); i++)
@@ -67,16 +72,56 @@ public:
         edges.push_back(new_edge);
     }
 
-    set<T> find_reachable(const T &v, set<T> &reached) {
-        auto it = reached.find(v);
-        if (it != reached.end())
-            return reached;
-        reached.insert(v);
+    vector<T> find_adjacent(const T &v, vector<pair<T, int>> &reached) {
+        vector<T> adjacent;
         for (auto i: edges) {
-            if (i.a == v)
-                reached = find_reachable(i.b, reached);
-            if (i.b == v)
-                reached = find_reachable(i.a, reached);
+            if (i.a == v) {
+                bool put = true;
+                for (int j = 0; j < reached.size(); j++) {
+                    if (reached[j].first == i.b) {
+                        put = false;
+                        break;
+                    }
+                }
+                if (put)
+                    adjacent.push_back(i.b);
+            }
+            if (i.b == v) {
+                bool put = true;
+                for (int j = 0; j < reached.size(); j++) {
+                    if (reached[j].first == i.a) {
+                        put = false;
+                        break;
+                    }
+                }
+                if (put)
+                    adjacent.push_back(i.a);
+            }
+        }
+        return adjacent;
+    }
+
+    vector<pair<T, int>> find_reachable(const T &v, int max_depth) {
+        vector<pair<T, int>> reached;
+        int depth = 0;
+        reached.push_back(make_pair(v, depth));
+        int index = 0;
+        int n = 1, m = 0;
+        while (index < reached.size()) {
+            auto adjacent = find_adjacent(reached[index].first, reached);
+            n--;
+            m += adjacent.size();
+            if (n == 0) {
+                depth++;
+                if (depth > max_depth)
+                    return reached;
+                n = m;
+                m = 0;
+            }
+            index++;
+            for (auto i: adjacent) {
+                reached.push_back(make_pair(i, depth));
+            }
         }
         return reached;
     }
