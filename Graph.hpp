@@ -4,7 +4,7 @@
 #include <cassert>
 #include <string>
 #include <cmath>
-#include <set>
+#include <random>
 
 using namespace std;
 
@@ -192,3 +192,22 @@ public:
 
     ~Graph() = default;
 };
+
+template<typename T>
+Graph<T> get_random_graph(int n, const vector<T> &vertices = {}) {
+    vector<vector<bool>> matrix(n);
+    for (int i = 0; i < n; i++) {
+        matrix[i].resize(n, false);
+        for (int j = i + 1; j < n; j++)
+            if (rand() % 2 == 1)
+                matrix[i][j] = true;
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < i; j++)
+            if (matrix[j][i])
+                matrix[i][j] = true;
+    }
+    Graph<T> random_graph(matrix, vertices);
+    return random_graph;
+}
