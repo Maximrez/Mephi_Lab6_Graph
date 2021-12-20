@@ -58,19 +58,17 @@ ignore = ["каф.15/2", "каф. 15/3", "Спорт. корпус, зал ги�
           "Бассейн (аренда)", "Братеевские пруды", "ИБРАЭ РАН", "каф.40", "каф.5", "Скалодром",
           "Спортивный комплекс МИСиС (ул. Профсоюзная 83б)", "каф.20", "Спорт. корпус, зал гимнастики",
           "Спорт. корпус, зал самбо", "Спорт. корпус, игровой зал", "Спорт. корпус, метод. каб.",
-          "Спорт. корпус, плоскостные сооружения МИФИ", "Игровой зал (Каширское шоссе, 64)", "каф.6", "каф.14",
-          "В-210а"]
+          "Спорт. корпус, плоскостные сооружения МИФИ", "Игровой зал (Каширское шоссе, 64)", "каф.6", "каф.14"]
 
 for quote in quotes:
     room_name = str(quote.text).rstrip()
     if room_name not in ignore:
         room_url = domen + str(quote).split('"')[3]
-        # print(room_name, room_url)
 
         for groups_list in parse_schedule(room_url, list(groups_dict.keys())):
             for i in range(len(groups_list) - 1):
                 for j in range(i + 1, len(groups_list)):
-                    if groups_list[i] != groups_list[j]:
+                    if groups_list[i] != groups_list[j] and groups_list[i][1:3] == groups_list[j][1:3]:
                         matrix[groups_dict[groups_list[i]]][groups_dict[groups_list[j]]] = 1
                         matrix[groups_dict[groups_list[j]]][groups_dict[groups_list[i]]] = 1
 
@@ -78,12 +76,4 @@ with open("../adjacency_matrix.txt", "w", encoding="utf-8") as f:
     f.write(str(n))
     for line in matrix:
         f.write("\n")
-        f.write((" ").join(list(str(x) for x in line)))
-#
-# room_url = "https://home.mephi.ru/rooms/3780046"
-# parse_schedule(room_url, list(groups_dict.keys()))
-# for groups_list in parse_schedule(room_url):
-#     for i in range(len(groups_list) - 1):
-#         for j in range(i + 1, len(groups_list)):
-#             matrix[groups_dict[groups_list[i]]][groups_dict[groups_list[j]]] = 1
-#             matrix[groups_dict[groups_list[j]]][groups_dict[groups_list[i]]] = 1
+        f.write(" ".join(list(str(x) for x in line)))
