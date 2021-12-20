@@ -4,11 +4,20 @@
 #include <clocale>
 #include "functions.hpp"
 #include "Graph.hpp"
+#include "tests.hpp"
 
 using namespace std;
 
 int main() {
     setlocale(LC_CTYPE, "rus");
+
+    test_edge_equal();
+    test_add_vertex();
+    test_add_edge();
+    test_is_edge();
+    test_create_graph();
+    test_find_reachable();
+    cout << "All tests successfully passed!";
 
     string groups_file_name = R"(D:\CLionProjects\mephi_lab_graph\group_list.txt)";
     string matrix_file_name = R"(D:\CLionProjects\mephi_lab_graph\adjacency_matrix.txt)";
