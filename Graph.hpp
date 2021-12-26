@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Дуга
 template<typename T>
 struct Edge {
     T a = 0;
@@ -38,176 +39,203 @@ ostream &operator<<(ostream &os, const Edge<T> &e) {
     return os;
 }
 
-template<typename T>
-class Graph {
-    vector<T> vertices;
-    vector<Edge<T>> edges;
-    vector<vector<bool>> matrix;
+// Занятие
+class Lesson {
+    vector<vector<string>> schedule;
 public:
-    Graph() {
-        vector<T> v;
-        vector<Edge<T>> e;
-        vector<vector<bool>> m;
+    Edge<string> groups;
 
+    explicit Lesson(const Edge<string> &e) : groups(e.a, e.b), schedule(7) {}
+
+    Lesson(const string &group1, const string &group2) : groups(group1, group2), schedule(7) {}
+
+    void add_time(int wd, const string &time) {
+        if (schedule[wd].empty()) {
+            schedule[wd].insert(schedule[wd].begin(), time);
+            return;
+        }
+
+        int index = 0;
+        while (index < schedule[wd].size()) {
+            if (schedule[wd][index] >= time)
+                break;
+            index++;
+        }
+        if (index == schedule[wd].size())
+            schedule[wd].push_back(time);
+        if (schedule[wd][index] > time)
+            schedule[wd].insert(schedule[wd].begin() + index, time);
+    }
+
+    pair<int, string> find_closest_lesson(int wd1, string time, int wd2) {
+        while (wd1 != wd2) {
+            for (int i = 0; i < schedule[wd1].size(); i++) {
+                if (schedule[wd1][i] >= time)
+                    return make_pair(wd1, schedule[wd1][i]);
+            }
+            wd1 = (wd1 + 1) % 7;
+            time = "00:00";
+        }
+        if (wd2 != -1)
+            for (int i = 0; i < schedule[wd2].size(); i++) {
+                if (schedule[wd2][i] >= time)
+                    return make_pair(wd2, schedule[wd1][i]);
+            }
+        return make_pair(-1, "");
+    }
+
+    ~Lesson() = default;
+};
+
+bool operator==(const Lesson &l1, const Lesson &l2) {
+    return (l1.groups == l2.groups);
+}
+
+bool operator!=(const Lesson &l1, const Lesson &l2) {
+    return !(l1 == l2);
+}
+
+// Граф групп и занятий
+class LessonGraph {
+    vector<string> vertices;
+    vector<Lesson> edges;
+public:
+    LessonGraph() {
+        vector<string> v;
+        vector<Lesson> e;
         vertices = v;
         edges = e;
-        matrix = m;
     };
 
-    Graph(const vector<vector<bool>> &m, const vector<T> &v) : vertices(v), matrix(m) {
-        for (int i = 0; i < vertices.size(); i++)
-            for (int j = i + 1; j < vertices.size(); j++)
-                if (matrix[i][j]) {
-                    Edge<T> e = Edge<T>(vertices[i], vertices[j]);
-                    edges.push_back(e);
+    LessonGraph(const vector<string> &v, vector<pair<Edge<string>, pair<int, string>>> &e) : vertices(v) {
+        for (auto &i: e) {
+            bool put = true;
+            for (int j = edges.size() - 1; j >= 0; j--)
+                if (edges[j].groups == i.first) {
+                    edges[j].add_time(i.second.first, i.second.second);
+                    put = false;
+                    break;
                 }
+            if (put) {
+                Lesson new_lesson(i.first);
+                new_lesson.add_time(i.second.first, i.second.second);
+                edges.push_back(new_lesson);
+            }
+        }
     };
 
     int get_size() {
         return vertices.size();
     }
 
-    void add_vertex(const T &v) {
-        for (int i = 0; i < vertices.size(); i++)
-            if (vertices[i] == v)
+    void add_vertex(const string &v) {
+        for (auto &vertice: vertices)
+            if (vertice == v)
                 return;
-
-        for (int i = 0; i < vertices.size(); ++i)
-            matrix[i].push_back(false);
-        matrix.push_back(vector<bool>(vertices.size() + 1, false));
 
         vertices.push_back(v);
     }
 
-    bool is_edge(const T &a, const T &b) {
-        Edge<T> new_edge(a, b);
-        for (int i = 0; i < edges.size(); i++)
-            if (edges[i] == new_edge)
+    bool is_edge(const string &a, const string &b) {
+        Lesson new_edge(a, b);
+        for (auto &edge: edges)
+            if (edge == new_edge)
                 return true;
         return false;
     }
 
-    void add_edge(const T &a, const T &b) {
+    void add_edge(const string &a, const string &b, int wd, const string &time) {
         add_vertex(a);
         if (a == b)
             return;
         add_vertex(b);
 
-        Edge<T> new_edge(a, b);
-        for (int i = 0; i < edges.size(); i++)
-            if (edges[i] == new_edge)
+        Lesson new_edge(a, b);
+        new_edge.add_time(wd, time);
+
+        for (auto &edge: edges)
+            if (edge == new_edge)
                 return;
         edges.push_back(new_edge);
-
-        for (int i = 0; i < vertices.size(); i++) {
-            if (vertices[i] == a) {
-                for (int j = i + 1; j < vertices.size(); j++) {
-                    if (vertices[j] == b) {
-                        matrix[i][j] = true;
-                        matrix[j][i] = true;
-                        break;
-                    }
-                }
-                break;
-            }
-            if (vertices[i] == b) {
-                for (int j = i + 1; j < vertices.size(); j++) {
-                    if (vertices[j] == a) {
-                        matrix[i][j] = true;
-                        matrix[j][i] = true;
-                        break;
-                    }
-                }
-                break;
-            }
-        }
     }
 
-    vector<T> find_adjacent(const T &v, vector<pair<T, int>> &reached) {
-        vector<T> adjacent;
+    vector<pair<string, pair<int, string>>> find_adjacent(const pair<string, pair<int, string>> &v, int wd2, const vector<pair<string, pair<int, string>>> &reached) {
+        vector<pair<string, pair<int, string>>> adjacent;
         for (auto i: edges) {
-            if (i.a == v) {
-                bool put = true;
-                for (int j = 0; j < reached.size(); j++) {
-                    if (reached[j].first == i.b) {
-                        put = false;
-                        break;
+            if (i.groups.a == v.first) {
+                auto closest_lesson = i.find_closest_lesson(v.second.first, v.second.second, wd2);
+                if (closest_lesson.first != -1) {
+                    bool put = true;
+                    for (const auto &j: reached) {
+                        if (j.first == i.groups.b) {
+                            put = false;
+                            break;
+                        }
                     }
+                    if (put)
+                        adjacent.emplace_back(i.groups.b, closest_lesson);
                 }
-                if (put)
-                    adjacent.push_back(i.b);
+
             }
-            if (i.b == v) {
-                bool put = true;
-                for (int j = 0; j < reached.size(); j++) {
-                    if (reached[j].first == i.a) {
-                        put = false;
-                        break;
+            if (i.groups.b == v.first) {
+                auto closest_lesson = i.find_closest_lesson(v.second.first, v.second.second, wd2);
+                if (closest_lesson.first != -1) {
+                    bool put = true;
+                    for (const auto &j: reached) {
+                        if (j.first == i.groups.a) {
+                            put = false;
+                            break;
+                        }
                     }
+                    if (put)
+                        adjacent.emplace_back(i.groups.a, closest_lesson);
                 }
-                if (put)
-                    adjacent.push_back(i.a);
+
             }
         }
         return adjacent;
     }
 
-    vector<pair<T, int>> find_reachable(const T &v, int max_depth) {
-        vector<pair<T, int>> reached;
-        int depth = 0;
-        reached.push_back(make_pair(v, -1));
+    vector<pair<string, pair<int, string>>> find_reachable(const string &v, int wd1, int wd2) {
+        vector<pair<string, pair<int, string>>> reached;
+        reached.emplace_back(v, make_pair(wd1, "00:00"));
         int index = 0;
-        int n = 1, m = 0;
         while (index < reached.size()) {
-            reached[index].second = depth;
-            auto adjacent = find_adjacent(reached[index].first, reached);
-            n--;
-            m += adjacent.size();
-            if (n == 0) {
-                depth++;
-                if (depth > max_depth)
-                    return reached;
-                n = m;
-                m = 0;
-            }
+            auto adjacent = find_adjacent(reached[index], wd2, reached);
             index++;
-            for (auto i: adjacent) {
-                reached.push_back(make_pair(i, -1));
+            for (const auto &i: adjacent) {
+                reached.push_back(i);
             }
         }
         return reached;
     }
 
-    vector<T> get_vertices() {
+    vector<string> get_vertices() {
         return vertices;
     }
 
-    vector<Edge<T>> get_edges() {
+    vector<Lesson> get_edges() {
         return edges;
     }
 
-    vector<vector<bool>> get_matrix() {
-        return matrix;
-    }
-
-    ~Graph() = default;
+    ~LessonGraph() = default;
 };
 
-template<typename T>
-Graph<T> get_random_graph(int n, const vector<T> &vertices = {}) {
-    vector<vector<bool>> matrix(n);
-    for (int i = 0; i < n; i++) {
-        matrix[i].resize(n, false);
-        for (int j = i + 1; j < n; j++)
-            if (rand() % 2 == 1)
-                matrix[i][j] = true;
-    }
-
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < i; j++)
-            if (matrix[j][i])
-                matrix[i][j] = true;
-    }
-    Graph<T> random_graph(matrix, vertices);
-    return random_graph;
-}
+//template<typename T>
+//Graph<T> get_random_graph(int n, const vector<T> &vertices = {}) {
+//    vector<vector<bool>> matrix(n);
+//    for (int i = 0; i < n; i++) {
+//        matrix[i].resize(n, false);
+//        for (int j = i + 1; j < n; j++)
+//            if (rand() % 2 == 1)
+//                matrix[i][j] = true;
+//    }
+//
+//    for (int i = 0; i < n; i++) {
+//        for (int j = 0; j < i; j++)
+//            if (matrix[j][i])
+//                matrix[i][j] = true;
+//    }
+//    Graph<T> random_graph(matrix, vertices);
+//    return random_graph;
+//}

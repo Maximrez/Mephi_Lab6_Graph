@@ -15,39 +15,57 @@ int main() {
     test_add_vertex();
     test_add_edge();
     test_is_edge();
-    test_create_graph();
-    test_find_reachable();
+    test_functions();
     cout << "All tests successfully passed!";
 
     string groups_file_name = R"(D:\CLionProjects\mephi_lab_graph\group_list.txt)";
-    string matrix_file_name = R"(D:\CLionProjects\mephi_lab_graph\adjacency_matrix.txt)";
+    string edges_file_name = R"(D:\CLionProjects\mephi_lab_graph\edges.txt)";
 
-    auto matrix = read_adjacency_matrix(matrix_file_name);
     auto groups = read_group_list(groups_file_name);
+    auto edges = read_edges(edges_file_name);
 
-    Graph<string> groups_graph(matrix, groups);
+    LessonGraph graph(groups, edges);
+
+    string date = "27.12";
+    auto date_pair = date_to_int(date);
+    int day = date_pair.first;
+    int month = date_pair.second;
+    int week_day = 0;
+
+    vector<pair<string, pair<int, string>>> groups_found;
 
     string input_file_name = R"(D:\CLionProjects\mephi_lab_graph\input.txt)";
     ifstream fin(input_file_name);
 
-    vector<pair<string, int>> groups_found;
-    string group;
-    int max_depth;
     int n;
-
     fin >> n;
     for (int i = 0; i < n; i++) {
-        fin >> group >> max_depth;
-        if (max_depth == -1)
-            max_depth = groups_graph.get_size();
+        string group, date1;
+        fin >> group >> date1;
+        auto date1_pair = date_to_int(date1);
+        int day1 = date1_pair.first;
+        int month1 = date1_pair.second;
+        int days_passed = count_days_passed(day1, month1, day, month);
+        int week_day2 = week_day;
+        int week_day1 = count_week_day(week_day2, days_passed);
 
-        auto reached = groups_graph.find_reachable(group, max_depth);
+        if (days_passed > 6) {
+            week_day2 = -1;
+        }
 
+        auto reached = graph.find_reachable(group, week_day1, week_day2);
         for (const auto &k: reached) {
             bool put = true;
             for (int j = 0; j < groups_found.size(); j++) {
                 if (k.first == groups_found[j].first) {
-                    groups_found[j].second = min(k.second, groups_found[j].second);
+                    if (k.second.first == groups_found[j].second.first) {
+                        groups_found[j].second.second = min(k.second.second, groups_found[j].second.second);
+                    } else {
+                        int farthest_wd = farthest_week_day(week_day, k.second.first, groups_found[j].second.first);
+                        groups_found[j].second.first = farthest_wd;
+                        if (farthest_wd == k.second.first)
+                            groups_found[j].second.second = k.second.second;
+                    }
                     put = false;
                     break;
                 }
@@ -56,9 +74,6 @@ int main() {
                 groups_found.push_back(k);
         }
     }
-
-    fin.close();
-
 
     string output_file_name = R"(D:\CLionProjects\mephi_lab_graph\output.txt)";
 

@@ -1,26 +1,49 @@
 import requests
 from bs4 import BeautifulSoup
 
+week_days = {'Понедельник': 0,
+             'Вторник': 1,
+             'Среда': 2,
+             'Четверг': 3,
+             'Пятница': 4,
+             'Суббота': 5}
+
+
+def add_edges(groups, wd, lt):
+    edges = open("../edges.txt", "a", encoding="utf-8")
+
+    for i in range(len(groups) - 1):
+        for j in range(i + 1, len(groups)):
+            if groups[i][1:3] == groups[j][1:3]:
+                edges.write(groups[i] + " " + groups[j] + " " + str(wd) + " " + str(lt) + "\n")
+
+    edges.close()
+
 
 def parse_schedule(room_url, group_names):
     response = requests.get(room_url)
-    soup = BeautifulSoup(response.text, 'xml')
-    quotes = soup.find_all('a')
-    names = list(str(quote.text).rstrip() for quote in quotes)
+    soup = BeautifulSoup(response.text, 'lxml')
+    quotes = list(map(lambda x: str(x.text).strip(), soup.find_all(["h3", "div", "a"], class_=["text-nowrap", "lesson-wday", "lesson-time"])))
 
     groups = list()
-    index = 0
-    while index < len(names):
-        while index < len(names) and names[index] not in group_names:
-            index += 1
+    wd = -1
+    lt = ""
 
-        together = list()
-        while index < len(names) and names[index] in group_names:
-            together.append(names[index])
-            index += 1
-        if len(together) > 1 and together not in groups:
-            groups.append(together)
-    return groups
+    for quote in quotes:
+        if quote in week_days.keys():
+            add_edges(groups, wd, lt)
+            groups = list()
+            wd = week_days[quote]
+            lt = ""
+        elif ":" in quote:
+            add_edges(groups, wd, lt)
+            groups = list()
+            lt = str(quote[:5])
+        elif quote in group_names and quote not in groups:
+            groups.append(quote)
+        else:
+            add_edges(groups, wd, lt)
+            groups = list()
 
 
 domen = 'https://home.mephi.ru'
@@ -45,8 +68,6 @@ with open("../group_list.txt", "w", encoding="utf-8") as f:
         groups_dict[group_name] = i
         i += 1
 
-matrix = [[0] * n for i in range(n)]
-
 url = domen + '/rooms?term_id=13'
 response = requests.get(url)
 soup = BeautifulSoup(response.text, 'lxml')
@@ -60,20 +81,16 @@ ignore = ["каф.15/2", "каф. 15/3", "Спорт. корпус, зал ги�
           "Спорт. корпус, зал самбо", "Спорт. корпус, игровой зал", "Спорт. корпус, метод. каб.",
           "Спорт. корпус, плоскостные сооружения МИФИ", "Игровой зал (Каширское шоссе, 64)", "каф.6", "каф.14"]
 
+group_names = list(groups_dict.keys())
+
+edges = open("../edges.txt", "w", encoding="utf-8")
+edges.close()
+
 for quote in quotes:
     room_name = str(quote.text).rstrip()
     if room_name not in ignore:
         room_url = domen + str(quote).split('"')[3]
+        parse_schedule(room_url, group_names)
 
-        for groups_list in parse_schedule(room_url, list(groups_dict.keys())):
-            for i in range(len(groups_list) - 1):
-                for j in range(i + 1, len(groups_list)):
-                    if groups_list[i] != groups_list[j] and groups_list[i][1:3] == groups_list[j][1:3]:
-                        matrix[groups_dict[groups_list[i]]][groups_dict[groups_list[j]]] = 1
-                        matrix[groups_dict[groups_list[j]]][groups_dict[groups_list[i]]] = 1
-
-with open("../adjacency_matrix.txt", "w", encoding="utf-8") as f:
-    f.write(str(n))
-    for line in matrix:
-        f.write("\n")
-        f.write(" ".join(list(str(x) for x in line)))
+with open("../edges.txt", "a", encoding="utf-8") as f:
+    f.write(".")
